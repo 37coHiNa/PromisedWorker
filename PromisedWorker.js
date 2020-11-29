@@ -1,3 +1,5 @@
+const isWorkerThread = ( typeof WorkerGlobalScope != "undefined" );
+
 class PromisedWorker extends Worker {
   
   #requests = new Map();
@@ -96,6 +98,8 @@ class PromisedWorker extends Worker {
 
 class Request {
   
+  static #methods = Object.create( null );
+  
   #requestID;
   #method;
   #args;
@@ -109,6 +113,8 @@ class Request {
     this.#args = args;
     
   }
+
+  static get methods() { return this.#methods; }
 
   get method() { return this.#method; }
   
@@ -146,7 +152,8 @@ class Request {
 
 }
 
-const methods = Object.create( null );
+const methods = Request.methods;
+
 const WorkerOnMessage = async event => {
 
   const request = new Request( event.data );
@@ -177,7 +184,7 @@ const WorkerOnMessage = async event => {
 
 };
 
-if ( typeof WorkerGlobalScope != "undefined" ) {
+if ( isWorkerThread ) {
   
   self.addEventListener( "message", WorkerOnMessage );
 
