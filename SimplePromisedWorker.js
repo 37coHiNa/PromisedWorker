@@ -1,24 +1,24 @@
 const isWorkerThread = ( typeof WorkerGlobalScope != "undefined" );
 
-const responseHandler = ( { status, message }, { resolve, reject } ) => {
-
-  switch ( status ) {
-
-    case "success":
-      resolve( message );
-      return;
-
-    case "failure":
-      reject( message );
-      return;
-
-  }
-
-};
-
 class PromisedWorker extends Worker {
   
   #requests = new Map();
+  
+  static #responseHandler = ( { status, message }, { resolve, reject } ) => {
+
+    switch ( status ) {
+
+      case "success":
+        resolve( message );
+        return;
+
+      case "failure":
+        reject( message );
+        return;
+
+    }
+
+  };
 
   constructor( ...args ) {
 
@@ -31,8 +31,7 @@ class PromisedWorker extends Worker {
       if ( this.#requests.has( requestID ) ) {
 
         const { resolve, reject } = this.#requests.get( requestID );
-        responseHandler( { status, message }, { resolve, reject } );
-        this.#requests.delete( requestID );
+        this.constructor.#responseHandler( { status, message }, { resolve, reject } );
 
       } else {
 
@@ -50,19 +49,18 @@ class PromisedWorker extends Worker {
 
   }
 
-  postMessage( message, transfer ) {
+  async postMessage( message, transfer ) {
 
     const requestID = ( Math.random() * 2 ** 53 ).toString( 16 ).padStart( 20, "0" );
 
     super.postMessage( { requestID, message }, transfer );
 
-    return new Promise( ( resolve, reject ) => {
+    const returnMessage = await new Promise( ( resolve, reject ) => {
 
       if ( this.#requests.has( requestID ) ) {
       
         const { status, message } = this.#requests.get( requestID );
-        responseHandler( { status, message }, { resolve, reject } );
-        this.#requests.delete( requestID );
+        this.constructor.#responseHandler( { status, message }, { resolve, reject } );
 
       } else {
 
@@ -71,6 +69,10 @@ class PromisedWorker extends Worker {
       }
 
     } );
+
+    this.#requests.delete( requestID );
+
+    return returnMessage;
 
   }
   
