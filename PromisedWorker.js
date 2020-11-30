@@ -42,7 +42,7 @@ class PromisedWorker extends Worker {
 
   async * postMessage( method, ...args ) {
     
-    const requestID = ( Math.random() * 2 ** 53 ).toString( 16 ).padStart( 20, "0" );
+    const requestID = this.constructor.#uuidIte.next().value;
     const request = new Map();
     this.#requests.set( requestID, request );
     
@@ -93,6 +93,41 @@ class PromisedWorker extends Worker {
     }
 
   }
+
+  static #uuidIte = ( function* () {
+
+    //RFC 4122
+    const HEXOCTETS = Object.freeze( [ ...Array(256) ].map( ( e, i ) => i.toString( 16 ).padStart( 2, "0" ).toUpperCase() ) );
+    const VARSION = 0x40;
+    const VARIANT = 0x80;
+
+    for (;;) {
+
+      const s0 = Math.random() * 0x100000000 >>> 0;
+      const s1 = Math.random() * 0x100000000 >>> 0;
+      const s2 = Math.random() * 0x100000000 >>> 0;
+      const s3 = Math.random() * 0x100000000 >>> 0;
+      yield "" +
+        HEXOCTETS[ s0 & 0xff ] +
+        HEXOCTETS[ s0 >>> 8 & 0xff ] +
+        HEXOCTETS[ s0 >>> 16 & 0xff ] +
+        HEXOCTETS[ s0 >>> 24 & 0xff ] + "-" +
+        HEXOCTETS[ s1 & 0xff ] +
+        HEXOCTETS[ s1 >>> 8 & 0xff ] + "-" +
+        HEXOCTETS[ s1 >>> 16 & 0x0f | VARSION ] +
+        HEXOCTETS[ s1 >>> 24 & 0xff ] + "-" +
+        HEXOCTETS[ s2 & 0x3f | VARIANT ] +
+        HEXOCTETS[ s2 >>> 8 & 0xff ] + "-" +
+        HEXOCTETS[ s2 >>> 16 & 0xff ] +
+        HEXOCTETS[ s2 >>> 24 & 0xff ] +
+        HEXOCTETS[ s3 & 0xff ] +
+        HEXOCTETS[ s3 >>> 8 & 0xff ] +
+        HEXOCTETS[ s3 >>> 16 & 0xff ] +
+        HEXOCTETS[ s3 >>> 24 & 0xff ];
+
+    }
+
+  } )();
 
 }
 
